@@ -1,7 +1,8 @@
 (ns cljsflappy.core
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [reagent.core :as r]
-            [cljs.core.async :as async :refer [put! chan <! >! timeout close!]]))
+            [cljs.core.async :as async :refer [put! chan <! >! timeout close!]]
+            [cljsflappy.highscore :as hs]))
 
 (enable-console-print!)
 
@@ -35,7 +36,7 @@
              :top {:pos-x pillar-start-pos :pos-y 500}
              :id "pillar-0"}]})
 
-(def flappy-state (r/atom flappy-start-state))
+(defonce flappy-state (r/atom flappy-start-state))
 
 (defn check-top-collition [top-pillar]
   (let [botleft {:x (:pos-x top-pillar) :y (:pos-y top-pillar)}
@@ -97,10 +98,10 @@
   (update-pillars))
 
 (defn reset-game []
+  (println "resetting game")
   (reset! flappy-state flappy-start-state))
 
 (defn flap []
-  (println "flapping")
   (swap! flappy-state update-in [:vel-y] + (:flap-vel @flappy-state)))
 
 (defn game-loop []
@@ -125,7 +126,9 @@
       (.preventDefault e))))
 
 (defn start-frame []
-  [:input {
+  [:div
+  [hs/high-score-frame]
+  [:input {:key "start-button"
            :type "button"
            :style {:position "absolute"
                     :left "200px"
@@ -133,7 +136,7 @@
             :value (if (:first-game @flappy-state)
                      "Start"
                      "Restart")
-            :on-click start-game}])
+            :on-click start-game}]])
 
 (defn flappy-frame []
   [:img {:src "imgs/flappy-base.png"
@@ -169,10 +172,13 @@
        ])])
 
 (defn score-frame []
-  [:h1 {:style {:position "absolute"
+  [:div
+   [:h1
+    {:key "score-frame"
+     :style {:position "absolute"
                 :left "200px"
                 :top "100px"}}
-   (:score @flappy-state)])
+   (:score @flappy-state)]])
 
 (defn edge-frame []
   [:img {:key "edge-frame"
@@ -186,14 +192,16 @@
   [:div
     {:style {:height "100%" :width "100%"}
      :on-mouse-down flap
-     ;:on-key-press flap
      }
    [flappy-frame]
    [pillar-frame]
    [score-frame]
    [edge-frame]
    (if (false? (:game-running @flappy-state))
-      [start-frame])])
+      (if (hs/is-high-score (:score @flappy-state))
+        [hs/set-high-score-frame (:score @flappy-state) reset-game]
+        [start-frame])
+      )])
 
 (defn init []
   (.addEventListener js/document "keydown" handle-keydown)

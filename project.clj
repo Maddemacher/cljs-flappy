@@ -5,7 +5,8 @@
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/clojurescript "1.7.228"]
                  [reagent "0.6.0-alpha"]
-                 [sablono "0.6.0"]]
+                 [sablono "0.6.0"]
+                 [matchbox "0.0.8-SNAPSHOT"]]
 
   :plugins [[lein-cljsbuild "1.1.2"]
             [lein-figwheel "0.5.0-6"]]
