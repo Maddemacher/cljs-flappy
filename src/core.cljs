@@ -100,6 +100,7 @@
   (reset! flappy-state flappy-start-state))
 
 (defn flap []
+  (println "flapping")
   (swap! flappy-state update-in [:vel-y] + (:flap-vel @flappy-state)))
 
 (defn game-loop []
@@ -116,6 +117,12 @@
   (do (reset-game)
       (swap! flappy-state update-in [:game-running] false?)
       (game-loop)))
+
+(defn handle-keydown [e]
+  (when (:game-running @flappy-state)
+    (do
+      (flap)
+      (.preventDefault e))))
 
 (defn start-frame []
   [:input {
@@ -178,7 +185,9 @@
 (defn get-frame []
   [:div
     {:style {:height "100%" :width "100%"}
-     :on-mouse-down flap}
+     :on-mouse-down flap
+     ;:on-key-press flap
+     }
    [flappy-frame]
    [pillar-frame]
    [score-frame]
@@ -186,5 +195,9 @@
    (if (false? (:game-running @flappy-state))
       [start-frame])])
 
-(r/render [get-frame]
-  (js/document.getElementById "board-area"))
+(defn init []
+  (.addEventListener js/document "keydown" handle-keydown)
+  (r/render [get-frame]
+    (js/document.getElementById "board-area")))
+
+(defonce start (init))
