@@ -1,7 +1,7 @@
 (defproject cljs-flappy "0.1.1-SNAPSHOT"
   :description "Flappy bird in clojure script based on https://github.com/bhauman/flappy-bird-demo"
 
-  :dependencies [[org.clojure/clojure "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/core.async "0.2.374"]
                  [org.clojure/clojurescript "1.7.228"]
                  [reagent "0.6.0-alpha"]
