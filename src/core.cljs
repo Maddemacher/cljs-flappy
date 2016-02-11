@@ -6,7 +6,7 @@
 (enable-console-print!)
 
 (def pillar-start-pos 450)
-(def pillar-death-mark -50)
+(def pillar-death-mark -60)
 (def pillar-gap 200)
 (def pillar-width 80)
 (def new-pillar-mark 150)
@@ -28,7 +28,7 @@
   :flappy-y 200
   :vel-y -1
   :acc-y -1
-  :vel-x -1
+  :vel-x -4
   :acc-x 0
   :flap-vel 10
   :pillars [{:bottom {:pos-x pillar-start-pos :pos-y 300}
@@ -68,7 +68,7 @@
   (swap! flappy-state update-in [:flappy-y] + (:vel-y @flappy-state)))
 
 (defn update-pillar [pillar]
-  (if (= (:pos-x (:bottom pillar)) pillar-death-mark)
+  (if (< (:pos-x (:bottom pillar)) pillar-death-mark)
     nil
     (-> (update-in pillar [:bottom :pos-x] + (:vel-x @flappy-state))
         (update-in [:top :pos-x] + (:vel-x @flappy-state)))))
@@ -167,6 +167,14 @@
                 :top "100px"}}
    (:score @flappy-state)])
 
+(defn edge-frame []
+  [:img {:key "edge-frame"
+         :src "imgs/Vintage-Floral-Photo-Frame.png"
+         :style {:position "absolute"
+                 :left -80
+                 :bottom -50
+                 :width 650}}])
+
 (defn get-frame []
   [:div
     {:style {:height "100%" :width "100%"}
@@ -174,6 +182,7 @@
    [flappy-frame]
    [pillar-frame]
    [score-frame]
+   [edge-frame]
    (if (false? (:game-running @flappy-state))
       [start-frame])])
 
