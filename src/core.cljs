@@ -1,7 +1,7 @@
 (ns cljsflappy.core
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]])
+  (:require-macros [cljs.core.async.macros :refer [go-loop]])
   (:require [reagent.core :as r]
-            [cljs.core.async :as async :refer [put! chan <! >! timeout close!]]
+            [cljs.core.async :as async :refer [<! timeout]]
             [cljsflappy.highscore :as hs]))
 
 (enable-console-print!)
@@ -38,64 +38,66 @@
 
 (defonce flappy-state (r/atom flappy-start-state))
 
-(defn check-top-collition [top-pillar]
+(defn check-top-collition [top-pillar flappy-pos]
   (let [botleft {:x (:pos-x top-pillar) :y (:pos-y top-pillar)}
-        botright {:x (+ (:x botleft) pillar-width) :y (:y botleft)}
-        flappy-pos {:x (:flappy-x @flappy-state) :y (+ (:flappy-y @flappy-state) flappy-height)}]
+        botright {:x (+ (:x botleft) pillar-width) :y (:y botleft)}]
         (and (< (:x botleft) (:x flappy-pos) (:x botright))
              (> ceiling-height (:y flappy-pos) (:y botleft)))))
 
-(defn check-bottom-collision [bottom-pillar]
+(defn check-bottom-collision [bottom-pillar flappy-pos]
   (let [topleft {:x (:pos-x bottom-pillar) :y (:pos-y bottom-pillar)}
-        topright {:x (+ (:x topleft) pillar-width) :y (:y topleft)}
-        flappy-pos {:x (:flappy-x @flappy-state) :y (- (:flappy-y @flappy-state) flappy-height)}]
+        topright {:x (+ (:x topleft) pillar-width) :y (:y topleft)}]
   (and (< (:x topleft) (:x flappy-pos) (:x topright))
        (< floor-height (:y flappy-pos) (:y topleft)))))
 
-(defn check-pillar-collision[pillar]
-  (or (check-bottom-collision (:bottom pillar))
-      (check-top-collition (:top pillar))))
+(defn check-pillar-collision[pillar flappy-pos]
+  (or (check-bottom-collision (:bottom pillar) flappy-pos)
+      (check-top-collition (:top pillar) flappy-pos)))
 
-(defn pillar-hit []
-  (some check-pillar-collision (:pillars @flappy-state)))
+(defn pillar-hit [flappy-pos pillars]
+  (some #(check-pillar-collision % flappy-pos) pillars))
 
-(defn check-death []
-  (or (>= floor-height (:flappy-y @flappy-state))
-      (<= ceiling-height (:flappy-y @flappy-state))
-      (pillar-hit)))
+(defn check-death [flappy-pos pillars]
+  (or (>= floor-height (:y flappy-pos))
+      (<= ceiling-height (:y flappy-pos))
+      (pillar-hit flappy-pos pillars)))
 
-(defn update-flappy []
-  (swap! flappy-state update-in [:vel-y] + (:acc-y @flappy-state))
-  (swap! flappy-state update-in [:flappy-y] + (:vel-y @flappy-state)))
+(defn update-flappy [state]
+  (-> (update-in state [:vel-y] + (:acc-y state))
+      (update-in [:flappy-y] + (:vel-y state))))
 
-(defn update-pillar [pillar]
+
+(defn update-pillar [pillar x-velocity]
   (if (< (:pos-x (:bottom pillar)) pillar-death-mark)
     nil
-    (-> (update-in pillar [:bottom :pos-x] + (:vel-x @flappy-state))
-        (update-in [:top :pos-x] + (:vel-x @flappy-state)))))
+    (-> (update-in pillar [:bottom :pos-x] + x-velocity)
+        (update-in [:top :pos-x] + x-velocity))))
 
 
-(defn generate-pillar []
-  (swap! flappy-state update-in [:score] inc)
+(defn generate-pillar [state]
   (let [ypos  (+ (:min new-pillar-range)
-                 (rand-int (- (:max new-pillar-range) (:min new-pillar-range))))]
-                    {:bottom {:pos-x pillar-start-pos :pos-y ypos}
-                     :top {:pos-x pillar-start-pos :pos-y (+ ypos pillar-gap)}
-                     :id (str "pillar-" (:score @flappy-state))}))
+                 (rand-int (- (:max new-pillar-range) (:min new-pillar-range))))
+        new-pillar {:bottom {:pos-x pillar-start-pos :pos-y ypos}
+                    :top {:pos-x pillar-start-pos :pos-y (+ ypos pillar-gap)}
+                    :id (str "pillar-" (:score state))}]
+    (-> (update-in state [:score] inc)
+        (update-in [:pillars] conj new-pillar))))
 
-(defn should-create-new-pillar[]
-  (let [last-pillar-pos (:pos-x (:bottom (first (:pillars @flappy-state))))]
+(defn should-create-new-pillar[state]
+  (let [last-pillar-pos (:pos-x (:bottom (first (:pillars state))))]
+    (println (< last-pillar-pos new-pillar-mark))
     (< last-pillar-pos new-pillar-mark)))
 
-(defn update-pillars []
-  (if (should-create-new-pillar)
-    (swap! flappy-state update-in [:pillars] conj (generate-pillar)))
-  (let [updated-pillars (filter some? (mapv #(update-pillar %) (:pillars @flappy-state)))]
-    (swap! flappy-state assoc :pillars updated-pillars)))
+(defn update-pillars [state]
+  (let [stage-1 (if (should-create-new-pillar state)
+                    (generate-pillar state)
+                    state)
+        stage-2 (assoc stage-1 :pillars (filter some? (mapv #(update-pillar % (:vel-x stage-1)) (:pillars stage-1))))]
+    stage-2))
 
-(defn update-state []
-  (update-flappy)
-  (update-pillars))
+(defn update-state [state]
+  (-> (update-flappy state)
+      (update-pillars)))
 
 (defn reset-game []
   (println "resetting game")
@@ -104,15 +106,22 @@
 (defn flap []
   (swap! flappy-state update-in [:vel-y] + (:flap-vel @flappy-state)))
 
+(defn get-new-game-state [current-state]
+  (let [updated-state-stage-one (update-state current-state)
+        updated-state-stage-two (if (check-death {:x (:flappy-x updated-state-stage-one) :y (:flappy-y updated-state-stage-one)} (:pillars updated-state-stage-one))
+                                    (-> (update-in updated-state-stage-one [:game-running] false?)
+                                        (update-in [:first-game] #(identity false)))
+                                    updated-state-stage-one)]
+    updated-state-stage-two))
+
 (defn game-loop []
   (when (:game-running @flappy-state)
     (go-loop []
       (async/<! (async/timeout game-speed))
-      (update-state)
-      (if (check-death)
-        (do (swap! flappy-state update-in [:game-running] false?)
-            (swap! flappy-state update-in [:first-game] #(identity false)))
-        (recur)))))
+        (let [new-game-state (get-new-game-state @flappy-state)]
+          (reset! flappy-state new-game-state)
+          (if (:game-running new-game-state)
+              (recur))))))
 
 (defn start-game []
   (do (reset-game)

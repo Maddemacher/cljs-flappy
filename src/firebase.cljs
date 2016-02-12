@@ -1,5 +1,5 @@
 (ns cljsflappy.firebase
-  (:require [matchbox.core :as m]))
+  (:require [matchbox.core :as m :refer [connect auth-anon get-in deref reset! listen-children]]))
 
 (enable-console-print!)
 
