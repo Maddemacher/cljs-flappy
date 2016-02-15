@@ -7,10 +7,10 @@
 (defonce newhighscore (r/atom {:name "" :position 0}))
 
 (defonce highscore (r/atom [{:name "Emil" :score 5}
-                        {:name "Emil" :score 4}
-                        {:name "Emil" :score 3}
-                        {:name "Emil" :score 2}
-                        {:name "Emil" :score 1}]))
+                            {:name "Emil" :score 4}
+                            {:name "Emil" :score 3}
+                            {:name "Emil" :score 2}
+                            {:name "Emil" :score 1}]))
 
 (defn high-score-frame []
   [:div
@@ -19,7 +19,7 @@
                 :left "200px"
                 :top "150px"}}
     (for [score @highscore]
-      [:h3 {:key (str (:name score) "-" (:score score))} (str (:name score) " - " (:score score))])])
+      [:h3 {:key (str (:name score) "-" (:score score) "-" (rand-int 10000))} (str (:name score) " - " (:score score))])])
 
 (defn sort-score [unsorted]
    (reverse (sort-by :score unsorted)))

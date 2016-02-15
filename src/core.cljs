@@ -29,7 +29,6 @@
   :flappy-y 200
   :vel-y -1
   :acc-y -1
-  :vel-x -4
   :acc-x 0
   :flap-vel 10
   :pillars [{:bottom {:pos-x pillar-start-pos :pos-y 300}
@@ -37,6 +36,9 @@
              :id "pillar-0"}]})
 
 (defonce flappy-state (r/atom flappy-start-state))
+
+(defn get-game-velocity[]
+  (js/Math.floor (- (- 5) (/ (:score @flappy-state) 4))))
 
 (defn check-top-collition [top-pillar flappy-pos]
   (let [botleft {:x (:pos-x top-pillar) :y (:pos-y top-pillar)}
@@ -80,24 +82,25 @@
         new-pillar {:bottom {:pos-x pillar-start-pos :pos-y ypos}
                     :top {:pos-x pillar-start-pos :pos-y (+ ypos pillar-gap)}
                     :id (str "pillar-" (:score state))}]
-    (-> (update-in state [:score] inc)
-        (update-in [:pillars] conj new-pillar))))
+        (update-in state [:pillars] conj new-pillar)))
 
 (defn should-create-new-pillar[state]
   (let [last-pillar-pos (:pos-x (:bottom (first (:pillars state))))]
-    (println (< last-pillar-pos new-pillar-mark))
     (< last-pillar-pos new-pillar-mark)))
 
-(defn update-pillars [state]
-  (let [stage-1 (if (should-create-new-pillar state)
-                    (generate-pillar state)
-                    state)
-        stage-2 (assoc stage-1 :pillars (filter some? (mapv #(update-pillar % (:vel-x stage-1)) (:pillars stage-1))))]
-    stage-2))
+(defn update-pillars [state x-velocity]
+  (assoc state :pillars (filter some? (mapv #(update-pillar % x-velocity) (:pillars state)))))
+
+(defn update-score [state]
+  (update-in state [:score] inc))
 
 (defn update-state [state]
-  (-> (update-flappy state)
-      (update-pillars)))
+  (let [updated-flappy (update-flappy state)]
+      (if (should-create-new-pillar updated-flappy)
+          (-> (update-score updated-flappy)
+              (generate-pillar)
+              (update-pillars (get-game-velocity)))
+          (update-pillars updated-flappy (get-game-velocity)))))
 
 (defn reset-game []
   (println "resetting game")
