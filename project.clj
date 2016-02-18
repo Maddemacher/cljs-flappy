@@ -13,20 +13,31 @@
 
   :clean-targets ^{:protect false} ["resources/public/js/out"
                                     "resources/public/js/cljs_flappy.js"
+                                    "release/resources/public/js/cljs_flappy.js",
+                                    "release/resources/public/js/out",
                                     :target-path]
 
   :source-paths ["src"]
 
   :cljsbuild {
-    :builds [{:id "cljs-flappy"
-              :source-paths ["src"]
-              :figwheel true
-              :compiler {
-                         :main cljsflappy.core
-                         :asset-path "js/out"
-                         :output-to "resources/public/js/cljs_flappy.js"
-                         :output-dir "resources/public/js/out"
-                         :source-map-timestamp true}}]}
+    :builds {
+       :dev {
+             :source-paths ["src"],
+             :figwheel true,
+             :compiler
+              { :main cljsflappy.core,
+                :asset-path "js/out",
+                :output-to "resources/public/js/cljs_flappy.js",
+                :output-dir "resources/public/js/out",
+               :source-map-timestamp true}
+             }
+       :release { :source-paths ["src"],
+                  :compiler,
+                  { :main cljsflappy.core,
+                    :asset-path "js/out",
+                    :output-to "release/resources/public/js/cljs_flappy.js",
+                    :output-dir "release/resources/public/js/out",
+                    :optimizations :whitespace}}}}
 
   :figwheel { :css-dirs ["resources/public/css"]
               :open-file-command "emacsclient"
