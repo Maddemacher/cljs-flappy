@@ -13,7 +13,7 @@
 (def new-pillar-mark 150)
 (def new-pillar-range {:min 100 :max 400})
 
-(def flappy-width 50)
+(def flappy-width 57)
 (def flappy-height 41)
 
 (def ceiling-height 640)
@@ -43,14 +43,16 @@
 (defn check-top-collition [top-pillar flappy-pos]
   (let [botleft {:x (:pos-x top-pillar) :y (:pos-y top-pillar)}
         botright {:x (+ (:x botleft) pillar-width) :y (:y botleft)}]
-        (and (< (:x botleft) (:x flappy-pos) (:x botright))
-             (> ceiling-height (:y flappy-pos) (:y botleft)))))
+        (and (or (< (:x botleft) (+ (:x flappy-pos) (/ flappy-width 2))  (:x botright))
+                 (< (:x botleft) (- (:x flappy-pos) (/ flappy-width 2))  (:x botright)))
+             (> ceiling-height (+ (:y flappy-pos) (* 1.5 flappy-height)) (:y botleft)))))
 
 (defn check-bottom-collision [bottom-pillar flappy-pos]
   (let [topleft {:x (:pos-x bottom-pillar) :y (:pos-y bottom-pillar)}
         topright {:x (+ (:x topleft) pillar-width) :y (:y topleft)}]
-  (and (< (:x topleft) (:x flappy-pos) (:x topright))
-       (< floor-height (:y flappy-pos) (:y topleft)))))
+  (and (or (< (:x topleft) (+ (:x flappy-pos) (/ flappy-width 2)) (:x topright))
+           (< (:x topleft) (- (:x flappy-pos) (/ flappy-width 2)) (:x topright)))
+       (< floor-height (- (:y flappy-pos) (/ flappy-height 2)) (:y topleft)))))
 
 (defn check-pillar-collision[pillar flappy-pos]
   (or (check-bottom-collision (:bottom pillar) flappy-pos)
@@ -153,8 +155,8 @@
 (defn flappy-frame []
   [:img {:src "imgs/flappy-base.png"
          :style {:position "absolute"
-                 :left (- (:flappy-x @flappy-state) flappy-width)
-                 :bottom (:flappy-y @flappy-state)}}])
+                 :left (- (:flappy-x @flappy-state) (/ flappy-width 2))
+                 :bottom (+ (:flappy-y @flappy-state) (/ flappy-height 2))}}])
 
 (defn pillar-base [pillar id min max]
   [:div {:key (str id "base-div")}
