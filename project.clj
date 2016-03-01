@@ -37,7 +37,7 @@
                     :asset-path "js/out",
                     :output-to "release/resources/public/js/cljs_flappy.js",
                     :output-dir "release/resources/public/js/out",
-                    :optimizations :whitespace}}}}
+                    :optimizations :simple}}}}
 
   :figwheel { :css-dirs ["resources/public/css"]
               :open-file-command "emacsclient"
